@@ -1,0 +1,10 @@
+# Copy this file to urls.txt, then put one full video/note URL on each line.
+# Blank lines and lines starting with # can be ignored by the batch command below.
+
+# Xiaohongshu: keep the full share URL, especially xsec_token.
+https://www.xiaohongshu.com/discovery/item/6a09c90200000000360197b4?source=webshare&xhsshare=pc_web&xsec_token=ABAzcUv7KzecnbikZ_kjV7lMBkKJppVHy48b_XFoCTFz4=&xsec_source=pc_share
+
+# Add more video/note URLs below, one per line.
+# https://www.xiaohongshu.com/discovery/item/...
+# https://www.youtube.com/watch?v=...
+# https://www.bilibili.com/video/...
