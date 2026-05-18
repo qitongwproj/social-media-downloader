@@ -119,30 +119,62 @@ model-00002-of-00002.safetensors
 .venv/bin/hf download Qwen/Qwen3-ASR-1.7B --local-dir models/Qwen3-ASR-1.7B
 ```
 
-## 视频转文字计划
+## 视频转文字
 
-1. 准备独立 ASR 环境
-   - Qwen3-ASR 官方建议 Python 3.12。
-   - 新建单独环境，例如 `.venv-asr/`，避免和当前下载脚本的 `.venv/` 混在一起。
-   - 安装 `third_party/Qwen3-ASR` 或官方 `qwen-asr` 包。
-   - 默认加载本地模型目录 `models/Qwen3-ASR-1.7B`，避免每次运行时重新下载。
+转写本地视频或音频文件：
 
-2. 从视频提取音频
-   - 依赖 `ffmpeg`。
-   - 将 `downloads/<平台>/*.mp4` 转为 `audio/<同名>.wav`。
-   - 建议统一为 16 kHz mono WAV，方便 ASR 处理。
+```bash
+./transcribe-video.sh "downloads/XiaoHongShu/example.mp4"
+```
+
+指定语言可以提升稳定性：
+
+```bash
+./transcribe-video.sh --language Chinese "downloads/XiaoHongShu/example.mp4"
+```
+
+一键下载并转写：
+
+```bash
+./download-and-transcribe.sh "完整视频分享链接"
+```
+
+指定下载目录和转写输出目录：
+
+```bash
+./download-and-transcribe.sh --download-dir ./downloads --transcript-dir ./transcripts "完整视频分享链接"
+```
+
+第一次运行转写会创建独立环境 `.venv-asr/` 并安装 Qwen3-ASR 依赖：
+
+```bash
+./transcribe-video.sh --setup-only
+```
+
+转写输出：
+
+```text
+audio/<视频文件名>.wav
+transcripts/<视频文件名>.txt
+transcripts/<视频文件名>.json
+```
+
+## 视频转文字实现说明
+
+1. ASR 环境
+   - 转写使用独立环境 `.venv-asr/`，避免和下载脚本的 `.venv/` 混在一起。
+   - 安装本地 submodule `third_party/Qwen3-ASR`。
+   - 默认加载本地模型目录 `models/Qwen3-ASR-1.7B`，避免运行时重新下载。
+
+2. 音频提取
+   - 脚本通过 `imageio-ffmpeg` 提供的 ffmpeg 二进制提取音频。
+   - 输出为 16 kHz mono WAV：`audio/<视频文件名>.wav`。
 
 3. 调用 Qwen3-ASR 转写
    - 默认模型使用 `Qwen/Qwen3-ASR-1.7B`，优先保证转写质量。
-   - GPU 可用时走 CUDA；没有 GPU 时允许 CPU fallback，但会明显变慢。
-   - 语言默认自动检测，也可以后续加参数指定 `Chinese`、`English` 等。
+   - `--device auto` 会优先使用 CUDA；没有 GPU 时使用 CPU。
+   - 可以用 `--language Chinese`、`--language English` 等指定语言。
 
 4. 保存转写结果
-   - 输出目录：`transcripts/`
-   - 文本文件：`transcripts/<视频文件名>.txt`
-   - 后续可扩展保存 JSON，包括语言、时长、时间戳等元信息。
-
-5. 串联下载和转写
-   - 保留当前入口 `./download-video.sh` 不变。
-   - 后续新增 `./transcribe-video.sh <video-file>`。
-   - 后续新增 `./download-and-transcribe.sh "视频链接"`，执行下载后自动转写最新下载文件。
+   - 纯文本：`transcripts/<视频文件名>.txt`
+   - 元数据：`transcripts/<视频文件名>.json`

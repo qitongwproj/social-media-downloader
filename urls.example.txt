@@ -3,6 +3,7 @@
 
 # Xiaohongshu: keep the full share URL, especially xsec_token.
 https://www.xiaohongshu.com/discovery/item/6a09c90200000000360197b4?source=webshare&xhsshare=pc_web&xsec_token=ABAzcUv7KzecnbikZ_kjV7lMBkKJppVHy48b_XFoCTFz4=&xsec_source=pc_share
+https://www.xiaohongshu.com/discovery/item/6a06dc03000000003601a919?source=webshare&xhsshare=pc_web&xsec_token=ABCGby2ralp_DM_gTewM6sR0bagGx1yE_M4AsM0G2fSIE=&xsec_source=pc_share
 
 # Add more video/note URLs below, one per line.
 # https://www.xiaohongshu.com/discovery/item/...

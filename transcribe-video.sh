@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$ROOT_DIR/.venv-asr"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+usage() {
+  cat <<EOF
+Usage:
+  ./transcribe-video.sh [options] <media-file>
+
+Examples:
+  ./transcribe-video.sh "downloads/XiaoHongShu/example.mp4"
+  ./transcribe-video.sh --language Chinese "downloads/XiaoHongShu/example.mp4"
+  ./transcribe-video.sh --device cpu "downloads/XiaoHongShu/example.mp4"
+
+Options:
+      --model-dir <dir>       Local model directory. Default: models/Qwen3-ASR-1.7B
+      --audio-dir <dir>       Extracted WAV output directory. Default: audio
+      --output-dir <dir>      Transcript output directory. Default: transcripts
+      --language <language>   Optional hint: Chinese, English, etc.
+      --device <auto|cuda|cpu>
+      --max-new-tokens <n>    Default: 1024
+      --force-audio           Re-extract WAV even if it already exists.
+      --keep-audio            Keep extracted WAV. This is the default.
+      --setup-only            Create ASR env and install dependencies, then exit.
+  -h, --help                  Show this help.
+EOF
+}
+
+ensure_asr_env() {
+  if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+    echo "Creating ASR Python environment: $VENV_DIR"
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+  fi
+
+  if [[ ! -f "$VENV_DIR/.qwen-asr-installed" ]]; then
+    echo "Installing ASR dependencies. This can take a while."
+    "$VENV_DIR/bin/python" -m pip install --upgrade pip
+    "$VENV_DIR/bin/python" -m pip install --upgrade torch imageio-ffmpeg
+    "$VENV_DIR/bin/python" -m pip install -e "$ROOT_DIR/third_party/Qwen3-ASR"
+    touch "$VENV_DIR/.qwen-asr-installed"
+  fi
+}
+
+SETUP_ONLY=0
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --setup-only)
+      SETUP_ONLY=1
+      shift
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+ensure_asr_env
+
+if [[ "$SETUP_ONLY" -eq 1 ]]; then
+  echo "ASR environment is ready: $VENV_DIR"
+  exit 0
+fi
+
+if [[ "${#ARGS[@]}" -eq 0 ]]; then
+  echo "Missing media file." >&2
+  usage >&2
+  exit 1
+fi
+
+exec "$VENV_DIR/bin/python" "$ROOT_DIR/scripts/transcribe_video.py" "${ARGS[@]}"
