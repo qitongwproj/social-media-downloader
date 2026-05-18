@@ -90,12 +90,42 @@ git submodule update --init --recursive repo/social-media-downloader/third_party
 git -C /home/qitong submodule update --init --recursive repo/social-media-downloader/third_party/Qwen3-ASR
 ```
 
+## ASR Model Weights
+
+默认转写模型使用：
+
+```text
+Qwen/Qwen3-ASR-1.7B
+```
+
+权重已下载到本地：
+
+```text
+models/Qwen3-ASR-1.7B
+```
+
+本地权重目录大小约 `4.4G`，主要文件是：
+
+```text
+model-00001-of-00002.safetensors
+model-00002-of-00002.safetensors
+```
+
+模型目录已加入 `.gitignore`，不会提交到仓库。
+
+如果需要重新下载：
+
+```bash
+.venv/bin/hf download Qwen/Qwen3-ASR-1.7B --local-dir models/Qwen3-ASR-1.7B
+```
+
 ## 视频转文字计划
 
 1. 准备独立 ASR 环境
    - Qwen3-ASR 官方建议 Python 3.12。
    - 新建单独环境，例如 `.venv-asr/`，避免和当前下载脚本的 `.venv/` 混在一起。
    - 安装 `third_party/Qwen3-ASR` 或官方 `qwen-asr` 包。
+   - 默认加载本地模型目录 `models/Qwen3-ASR-1.7B`，避免每次运行时重新下载。
 
 2. 从视频提取音频
    - 依赖 `ffmpeg`。
@@ -103,7 +133,7 @@ git -C /home/qitong submodule update --init --recursive repo/social-media-downlo
    - 建议统一为 16 kHz mono WAV，方便 ASR 处理。
 
 3. 调用 Qwen3-ASR 转写
-   - 默认模型优先使用 `Qwen/Qwen3-ASR-0.6B`，速度和资源占用更友好。
+   - 默认模型使用 `Qwen/Qwen3-ASR-1.7B`，优先保证转写质量。
    - GPU 可用时走 CUDA；没有 GPU 时允许 CPU fallback，但会明显变慢。
    - 语言默认自动检测，也可以后续加参数指定 `Chinese`、`English` 等。
 
