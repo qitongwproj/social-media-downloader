@@ -1,9 +1,12 @@
 # Social Media Downloader
 
-一个本地命令行视频下载工具。核心入口只有一个：
+一个本地命令行视频下载和转文字工具。常用入口：
 
 ```bash
+./video-to-text.sh "视频链接"
+./video-to-text.sh --batch urls.txt
 ./download-video.sh "视频链接"
+./transcribe-video.sh "本地视频文件"
 ```
 
 ## 使用
@@ -57,11 +60,44 @@ while IFS= read -r url; do
 done < urls.txt
 ```
 
+## 链接直接转文字
+
+单个链接下载并转成 Markdown：
+
+```bash
+./video-to-text.sh --language Chinese "完整视频分享链接"
+```
+
+批量处理：
+
+```bash
+./video-to-text.sh --batch urls.txt --language Chinese
+```
+
+批量时跳过失败链接并继续：
+
+```bash
+./video-to-text.sh --batch urls.txt --language Chinese --continue-on-error
+```
+
+输出：
+
+```text
+downloads/<平台>/<视频标题>.<扩展名>
+transcripts/<视频标题>.md
+```
+
+默认不会保留中间音频文件。需要保留 WAV 时加：
+
+```bash
+./video-to-text.sh --keep-audio --language Chinese "完整视频分享链接"
+```
+
 ## 说明
 
 - 第一次运行会自动创建项目本地 `.venv/`，并安装 `yt-dlp`。
 - 默认下载最佳可用视频；如果系统没有 `ffmpeg`，会优先选择单文件 MP4，避免合并失败。
-- 下载文件默认保存到 `downloads/<平台>/`。
+- 下载文件默认保存到 `downloads/<平台>/<视频标题>.<扩展名>`，不额外拼接视频 ID。
 - 支持平台取决于 `yt-dlp`，例如小红书、YouTube、TikTok、Bilibili 等。
 
 ## 更新下载器
@@ -151,12 +187,16 @@ model-00002-of-00002.safetensors
 ./transcribe-video.sh --setup-only
 ```
 
+默认安装 CUDA 12.4 版 PyTorch，匹配当前机器的 NVIDIA driver。需要换 PyTorch 源时可以设置：
+
+```bash
+TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121 ./transcribe-video.sh --setup-only
+```
+
 转写输出：
 
 ```text
-audio/<视频文件名>.wav
-transcripts/<视频文件名>.txt
-transcripts/<视频文件名>.json
+transcripts/<视频文件名>.md
 ```
 
 ## 视频转文字实现说明
@@ -168,7 +208,8 @@ transcripts/<视频文件名>.json
 
 2. 音频提取
    - 脚本通过 `imageio-ffmpeg` 提供的 ffmpeg 二进制提取音频。
-   - 输出为 16 kHz mono WAV：`audio/<视频文件名>.wav`。
+   - 默认使用临时 16 kHz mono WAV，转写完成后删除。
+   - 需要保留音频时传 `--keep-audio`，输出到 `audio/<视频文件名>.wav`。
 
 3. 调用 Qwen3-ASR 转写
    - 默认模型使用 `Qwen/Qwen3-ASR-1.7B`，优先保证转写质量。
@@ -176,5 +217,4 @@ transcripts/<视频文件名>.json
    - 可以用 `--language Chinese`、`--language English` 等指定语言。
 
 4. 保存转写结果
-   - 纯文本：`transcripts/<视频文件名>.txt`
-   - 元数据：`transcripts/<视频文件名>.json`
+   - Markdown：`transcripts/<视频文件名>.md`

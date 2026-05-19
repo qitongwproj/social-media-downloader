@@ -6,3 +6,6 @@ audio/
 transcripts/
 
 *.pyc
+__pycache__/
+
+urls.example.txt

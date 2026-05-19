@@ -118,9 +118,7 @@ fi
 
 COMMON_ARGS=(
   --no-playlist
-  --restrict-filenames
   --trim-filenames 180
-  --newline
   --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
@@ -133,5 +131,5 @@ exec "$YTDLP" \
   "${EXTRA_ARGS[@]}" \
   -f "$FORMAT" \
   -P "$OUTPUT_DIR" \
-  -o "%(extractor)s/%(title).120B [%(id)s].%(ext)s" \
+  -o "%(extractor)s/%(title).120B.%(ext)s" \
   "$URL"
