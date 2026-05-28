@@ -29,6 +29,7 @@ Transcribe options passed to ./transcribe-video.sh:
       --language <language>
       --device <auto|cuda|cpu>
       --max-new-tokens <n>
+      --max-chunk-sec <sec>
       --force-audio
       --keep-audio
 EOF
@@ -62,7 +63,7 @@ while [[ $# -gt 0 ]]; do
       TRANSCRIBE_ARGS+=("--output-dir" "${2:-}")
       shift 2
       ;;
-    --model-dir|--audio-dir|--language|--device|--max-new-tokens)
+    --model-dir|--audio-dir|--language|--device|--max-new-tokens|--max-chunk-sec)
       TRANSCRIBE_ARGS+=("$1" "${2:-}")
       shift 2
       ;;

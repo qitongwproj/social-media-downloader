@@ -23,6 +23,7 @@ Options:
       --language <language>   Optional hint: Chinese, English, etc.
       --device <auto|cuda|cpu>
       --max-new-tokens <n>    Default: 1024
+      --max-chunk-sec <sec>   Smaller audio chunks reduce GPU memory use.
       --force-audio           Re-extract WAV even if it already exists.
       --keep-audio            Keep extracted WAV under --audio-dir. Default: delete temporary audio.
       --setup-only            Create ASR env and install dependencies, then exit.

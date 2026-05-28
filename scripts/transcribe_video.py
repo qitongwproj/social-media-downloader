@@ -17,6 +17,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", default=None, help='Optional language hint, for example "Chinese" or "English".')
     parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto", help="Inference device.")
     parser.add_argument("--max-new-tokens", type=int, default=1024, help="Maximum generated tokens.")
+    parser.add_argument(
+        "--max-chunk-sec",
+        type=float,
+        default=None,
+        help="Override Qwen3-ASR maximum audio chunk seconds. Smaller values reduce GPU memory use.",
+    )
     parser.add_argument("--keep-audio", action="store_true", help="Keep extracted WAV file under --audio-dir.")
     parser.add_argument("--force-audio", action="store_true", help="Re-extract WAV even if it already exists.")
     return parser.parse_args()
@@ -174,9 +180,18 @@ def main() -> int:
         import torch
         from qwen_asr import Qwen3ASRModel
 
+        if args.max_chunk_sec is not None:
+            import qwen_asr.inference.qwen3_asr as qwen3_asr
+            import qwen_asr.inference.utils as qwen_utils
+
+            qwen_utils.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
+            qwen3_asr.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
+
         device_map, dtype = choose_device(args.device)
         print(f"Loading model: {model_dir}")
         print(f"Device: {device_map}, dtype: {dtype}")
+        if args.max_chunk_sec is not None:
+            print(f"Max audio chunk: {args.max_chunk_sec}s")
 
         model = Qwen3ASRModel.from_pretrained(
             str(model_dir),

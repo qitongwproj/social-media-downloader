@@ -26,6 +26,7 @@ Options:
       --device <auto|cuda|cpu>       ASR device. Default: auto.
       --model-dir <dir>              Local model directory. Default: models/Qwen3-ASR-1.7B
       --max-new-tokens <n>           Default: 1024
+      --max-chunk-sec <sec>          Smaller audio chunks reduce GPU memory use.
       --force-audio                  Re-extract WAV even if it already exists.
       --keep-audio                   Keep extracted WAV. Default: delete temporary audio.
       --update                       Update yt-dlp before downloading.
@@ -52,7 +53,7 @@ while [[ $# -gt 0 ]]; do
       CONTINUE_ON_ERROR=1
       shift
       ;;
-    --download-dir|--transcript-dir|--audio-dir|--cookies|--cookies-from-browser|--language|--device|--model-dir|--max-new-tokens)
+    --download-dir|--transcript-dir|--audio-dir|--cookies|--cookies-from-browser|--language|--device|--model-dir|--max-new-tokens|--max-chunk-sec)
       PIPELINE_ARGS+=("$1" "${2:-}")
       shift 2
       ;;
