@@ -4,6 +4,7 @@ downloads/
 models/
 audio/
 transcripts/
+.browser-profiles/
 
 *.pyc
 __pycache__/
