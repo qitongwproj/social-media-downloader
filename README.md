@@ -214,6 +214,7 @@ transcripts/<视频文件名>.md
 3. 调用 Qwen3-ASR 转写
    - 默认模型使用 `Qwen/Qwen3-ASR-1.7B`，优先保证转写质量。
    - `--device auto` 会优先使用 CUDA；没有 GPU 时使用 CPU。
+   - 默认使用 `--max-new-tokens 4096` 和 `--max-chunk-sec 60`，降低长视频被截断或显存不足的概率。
    - 可以用 `--language Chinese`、`--language English` 等指定语言。
 
 4. 保存转写结果

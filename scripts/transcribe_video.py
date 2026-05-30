@@ -16,11 +16,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="transcripts", help="Directory for transcript outputs.")
     parser.add_argument("--language", default=None, help='Optional language hint, for example "Chinese" or "English".')
     parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto", help="Inference device.")
-    parser.add_argument("--max-new-tokens", type=int, default=1024, help="Maximum generated tokens.")
+    parser.add_argument("--max-new-tokens", type=int, default=4096, help="Maximum generated tokens.")
     parser.add_argument(
         "--max-chunk-sec",
         type=float,
-        default=None,
+        default=60,
         help="Override Qwen3-ASR maximum audio chunk seconds. Smaller values reduce GPU memory use.",
     )
     parser.add_argument("--keep-audio", action="store_true", help="Keep extracted WAV file under --audio-dir.")

@@ -25,8 +25,8 @@ Options:
       --language <language>          Optional ASR hint: Chinese, English, etc.
       --device <auto|cuda|cpu>       ASR device. Default: auto.
       --model-dir <dir>              Local model directory. Default: models/Qwen3-ASR-1.7B
-      --max-new-tokens <n>           Default: 1024
-      --max-chunk-sec <sec>          Smaller audio chunks reduce GPU memory use.
+      --max-new-tokens <n>           Default: 4096
+      --max-chunk-sec <sec>          Audio chunk size. Default: 60
       --force-audio                  Re-extract WAV even if it already exists.
       --keep-audio                   Keep extracted WAV. Default: delete temporary audio.
       --update                       Update yt-dlp before downloading.
