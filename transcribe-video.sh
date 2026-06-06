@@ -40,7 +40,8 @@ ensure_asr_env() {
   if [[ ! -f "$VENV_DIR/.qwen-asr-installed" ]]; then
     echo "Installing ASR dependencies. This can take a while."
     "$VENV_DIR/bin/python" -m pip install --upgrade pip
-    "$VENV_DIR/bin/python" -m pip install --upgrade torch imageio-ffmpeg --index-url "$TORCH_INDEX_URL"
+    "$VENV_DIR/bin/python" -m pip install --upgrade torch --index-url "$TORCH_INDEX_URL"
+    "$VENV_DIR/bin/python" -m pip install --upgrade imageio-ffmpeg
     "$VENV_DIR/bin/python" -m pip install -e "$ROOT_DIR/third_party/Qwen3-ASR"
     touch "$VENV_DIR/.qwen-asr-installed"
   fi
