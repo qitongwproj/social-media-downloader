@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=config.sh
+source "$ROOT_DIR/config.sh"
 MARKER="$(mktemp)"
 INFO_FILE="$(mktemp)"
 trap 'rm -f "$MARKER" "$INFO_FILE"' EXIT
@@ -23,7 +25,7 @@ Download options passed to ./download-video.sh:
       --update
 
 Transcribe options passed to ./transcribe-video.sh:
-      --model-dir <dir>
+      --model-dir <dir>            Default: $DEFAULT_MODEL_DIR
       --audio-dir <dir>
       --transcript-dir <dir>
       --language <language>

@@ -11,7 +11,11 @@ from pathlib import Path
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Transcribe a local video/audio file with Qwen3-ASR.")
     parser.add_argument("media", help="Path to a local video or audio file.")
-    parser.add_argument("--model-dir", default="models/Qwen3-ASR-1.7B", help="Local Qwen3-ASR model directory.")
+    parser.add_argument(
+        "--model-dir",
+        default=os.environ.get("DEFAULT_MODEL_DIR", "/home/qitong/models/Qwen3-ASR-1.7B"),
+        help="Local Qwen3-ASR model directory.",
+    )
     parser.add_argument("--audio-dir", default="audio", help="Directory for extracted WAV files when --keep-audio is used.")
     parser.add_argument("--output-dir", default="transcripts", help="Directory for transcript outputs.")
     parser.add_argument("--language", default=None, help='Optional language hint, for example "Chinese" or "English".')

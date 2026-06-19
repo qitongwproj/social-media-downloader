@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=config.sh
+source "$ROOT_DIR/config.sh"
 
 usage() {
   cat <<EOF
@@ -24,7 +26,7 @@ Options:
       --cookies-from-browser <b>     Use browser cookies: chrome, chromium, firefox.
       --language <language>          Optional ASR hint: Chinese, English, etc.
       --device <auto|cuda|cpu>       ASR device. Default: auto.
-      --model-dir <dir>              Local model directory. Default: models/Qwen3-ASR-1.7B
+      --model-dir <dir>              Local model directory. Default: $DEFAULT_MODEL_DIR
       --max-new-tokens <n>           Default: 4096
       --max-chunk-sec <sec>          Audio chunk size. Default: 60
       --force-audio                  Re-extract WAV even if it already exists.

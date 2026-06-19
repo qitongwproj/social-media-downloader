@@ -137,7 +137,7 @@ Qwen/Qwen3-ASR-1.7B
 权重已下载到本地：
 
 ```text
-models/Qwen3-ASR-1.7B
+/home/qitong/models/Qwen3-ASR-1.7B
 ```
 
 本地权重目录大小约 `4.4G`，主要文件是：
@@ -147,12 +147,15 @@ model-00001-of-00002.safetensors
 model-00002-of-00002.safetensors
 ```
 
-模型目录已加入 `.gitignore`，不会提交到仓库。
+模型目录在仓库之外，不会提交到仓库。
+
+模型路径统一在 [`config.sh`](config.sh) 的 `DEFAULT_MODEL_DIR` 变量中维护，
+所有 shell 脚本和 Python 转写脚本都从这里读取。需要更换模型位置时只改这一处。
 
 如果需要重新下载：
 
 ```bash
-.venv/bin/hf download Qwen/Qwen3-ASR-1.7B --local-dir models/Qwen3-ASR-1.7B
+.venv/bin/hf download Qwen/Qwen3-ASR-1.7B --local-dir /home/qitong/models/Qwen3-ASR-1.7B
 ```
 
 ## 视频转文字
@@ -204,7 +207,7 @@ transcripts/<视频文件名>.md
 1. ASR 环境
    - 转写使用独立环境 `.venv-asr/`，避免和下载脚本的 `.venv/` 混在一起。
    - 安装本地 submodule `third_party/Qwen3-ASR`。
-   - 默认加载本地模型目录 `models/Qwen3-ASR-1.7B`，避免运行时重新下载。
+   - 默认加载本地模型目录 `/home/qitong/models/Qwen3-ASR-1.7B`，避免运行时重新下载。路径统一在 `config.sh` 中维护。
 
 2. 音频提取
    - 脚本通过 `imageio-ffmpeg` 提供的 ffmpeg 二进制提取音频。
