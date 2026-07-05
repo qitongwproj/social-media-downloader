@@ -106,45 +106,18 @@ transcripts/<视频标题>.md
 ./download-video.sh --update "视频链接"
 ```
 
-## Qwen3-ASR Submodule
-
-本项目已把 Qwen3-ASR 作为 submodule 放在：
-
-```text
-third_party/Qwen3-ASR
-```
-
-新环境拉取代码后初始化：
-
-```bash
-git submodule update --init --recursive repo/social-media-downloader/third_party/Qwen3-ASR
-```
-
-如果当前目录就是本项目目录，也可以运行：
-
-```bash
-git -C /home/qitong submodule update --init --recursive repo/social-media-downloader/third_party/Qwen3-ASR
-```
-
-## ASR Model Weights
+## ASR 模型
 
 默认转写模型使用：
 
 ```text
-Qwen/Qwen3-ASR-1.7B
+Qwen/Qwen3-ASR-1.7B-hf
 ```
 
-权重已下载到本地：
+使用前需要先将模型权重下载到本地，默认路径是：
 
 ```text
-/home/qitong/models/Qwen3-ASR-1.7B
-```
-
-本地权重目录大小约 `4.4G`，主要文件是：
-
-```text
-model-00001-of-00002.safetensors
-model-00002-of-00002.safetensors
+D:\models\Qwen3-ASR-1.7B-hf
 ```
 
 模型目录在仓库之外，不会提交到仓库。
@@ -152,13 +125,26 @@ model-00002-of-00002.safetensors
 模型路径统一在 [`config.sh`](config.sh) 的 `DEFAULT_MODEL_DIR` 变量中维护，
 所有 shell 脚本和 Python 转写脚本都从这里读取。需要更换模型位置时只改这一处。
 
-如果需要重新下载：
+下载命令示例：
 
 ```bash
-.venv/bin/hf download Qwen/Qwen3-ASR-1.7B --local-dir /home/qitong/models/Qwen3-ASR-1.7B
+.venv/bin/hf download Qwen/Qwen3-ASR-1.7B-hf --local-dir "D:\models\Qwen3-ASR-1.7B-hf"
 ```
 
+`Qwen3-ASR-1.7B-hf` 使用原生 Transformers 接口加载，需要 `transformers==5.13.0`。
+`transcribe-video.sh --setup-only` 会安装转写所需依赖。
+
 ## 视频转文字
+
+已验证的完整流程：
+
+```bash
+./transcribe-video.sh --setup-only
+./video-to-text.sh --language Chinese "完整视频分享链接"
+```
+
+流程会先用 `yt-dlp` 下载视频，再提取 16 kHz mono WAV 音频，最后使用
+`D:\models\Qwen3-ASR-1.7B-hf` 生成 Markdown 转写稿。
 
 转写本地视频或音频文件：
 
@@ -184,13 +170,13 @@ model-00002-of-00002.safetensors
 ./download-and-transcribe.sh --download-dir ./downloads --transcript-dir ./transcripts "完整视频分享链接"
 ```
 
-第一次运行转写会创建独立环境 `.venv-asr/` 并安装 Qwen3-ASR 依赖：
+第一次运行转写会创建独立环境 `.venv-asr/` 并安装 ASR 依赖：
 
 ```bash
 ./transcribe-video.sh --setup-only
 ```
 
-默认安装 CUDA 12.4 版 PyTorch，匹配当前机器的 NVIDIA driver。需要换 PyTorch 源时可以设置：
+默认安装 CUDA 12.4 版 PyTorch。需要换 PyTorch 源时可以设置：
 
 ```bash
 TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121 ./transcribe-video.sh --setup-only
@@ -206,16 +192,18 @@ transcripts/<视频文件名>.md
 
 1. ASR 环境
    - 转写使用独立环境 `.venv-asr/`，避免和下载脚本的 `.venv/` 混在一起。
-   - 安装本地 submodule `third_party/Qwen3-ASR`。
-   - 默认加载本地模型目录 `/home/qitong/models/Qwen3-ASR-1.7B`，避免运行时重新下载。路径统一在 `config.sh` 中维护。
+   - 安装 PyTorch、`imageio-ffmpeg`、`qwen-asr` 和 `transformers==5.13.0`。
+   - 对 `Qwen3-ASR-1.7B-hf`，Python 脚本会走原生 Transformers `AutoModelForMultimodalLM` / `AutoProcessor`。
+   - 默认加载本地模型目录 `D:\models\Qwen3-ASR-1.7B-hf`，避免运行时重新下载。
 
 2. 音频提取
    - 脚本通过 `imageio-ffmpeg` 提供的 ffmpeg 二进制提取音频。
    - 默认使用临时 16 kHz mono WAV，转写完成后删除。
+   - 如果输入本身是 `.wav`、`.mp3`、`.m4a` 等音频文件，会直接转写，不再重复提取。
    - 需要保留音频时传 `--keep-audio`，输出到 `audio/<视频文件名>.wav`。
 
 3. 调用 Qwen3-ASR 转写
-   - 默认模型使用 `Qwen/Qwen3-ASR-1.7B`，优先保证转写质量。
+   - 默认模型使用 `Qwen/Qwen3-ASR-1.7B-hf`，优先保证转写质量。
    - `--device auto` 会优先使用 CUDA；没有 GPU 时使用 CPU。
    - 默认使用 `--max-new-tokens 4096` 和 `--max-chunk-sec 60`，降低长视频被截断或显存不足的概率。
    - 可以用 `--language Chinese`、`--language English` 等指定语言。

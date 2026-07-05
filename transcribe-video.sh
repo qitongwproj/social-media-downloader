@@ -44,7 +44,12 @@ ensure_asr_env() {
     "$VENV_DIR/bin/python" -m pip install --upgrade pip
     "$VENV_DIR/bin/python" -m pip install --upgrade torch --index-url "$TORCH_INDEX_URL"
     "$VENV_DIR/bin/python" -m pip install --upgrade imageio-ffmpeg
-    "$VENV_DIR/bin/python" -m pip install -e "$ROOT_DIR/third_party/Qwen3-ASR"
+    if [[ -d "$ROOT_DIR/third_party/Qwen3-ASR" ]]; then
+      "$VENV_DIR/bin/python" -m pip install -e "$ROOT_DIR/third_party/Qwen3-ASR"
+    else
+      "$VENV_DIR/bin/python" -m pip install --upgrade qwen-asr
+    fi
+    "$VENV_DIR/bin/python" -m pip install --upgrade "transformers==5.13.0"
     touch "$VENV_DIR/.qwen-asr-installed"
   fi
 }

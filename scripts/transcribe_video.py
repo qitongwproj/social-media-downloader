@@ -13,7 +13,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("media", help="Path to a local video or audio file.")
     parser.add_argument(
         "--model-dir",
-        default=os.environ.get("DEFAULT_MODEL_DIR", "/home/qitong/models/Qwen3-ASR-1.7B"),
+        default=os.environ.get("DEFAULT_MODEL_DIR", r"D:\models\Qwen3-ASR-1.7B-hf"),
         help="Local Qwen3-ASR model directory.",
     )
     parser.add_argument("--audio-dir", default="audio", help="Directory for extracted WAV files when --keep-audio is used.")
@@ -65,9 +65,20 @@ def extract_audio(media_path: Path, wav_path: Path, force: bool) -> None:
         "wav",
         str(wav_path),
     ]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed extracting audio from {media_path}:\n{result.stderr[-4000:]}")
+
+
+def is_audio_file(path: Path) -> bool:
+    return path.suffix.lower() in {".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus"}
 
 
 def choose_device(device: str):
@@ -82,6 +93,30 @@ def choose_device(device: str):
     if torch.cuda.is_available():
         return "cuda:0", torch.bfloat16
     return "cpu", torch.float32
+
+
+def patch_qwen_asr_rope_defaults() -> None:
+    import qwen_asr.core.transformers_backend.modeling_qwen3_asr as qwen3_asr_modeling
+
+    rotary_cls = qwen3_asr_modeling.Qwen3ASRThinkerTextRotaryEmbedding
+    if getattr(rotary_cls, "_social_downloader_rope_patch", False):
+        return
+
+    original_init = rotary_cls.__init__
+
+    def patched_init(self, config, device=None):
+        rope_parameters = getattr(config, "rope_parameters", None) or {}
+        if getattr(config, "rope_scaling", None) is None:
+            config.rope_scaling = {
+                "rope_type": rope_parameters.get("rope_type", "default"),
+                "mrope_section": [24, 20, 20],
+            }
+        if "rope_theta" in rope_parameters:
+            config.rope_theta = rope_parameters["rope_theta"]
+        original_init(self, config, device=device)
+
+    rotary_cls.__init__ = patched_init
+    rotary_cls._social_downloader_rope_patch = True
 
 
 def write_outputs(output_base: Path, result, source_media: Path, wav_path: Path | None, model_dir: Path) -> None:
@@ -152,10 +187,66 @@ def render_markdown(title: str, text: str, language: str, source_media: Path, wa
     )
 
 
+def model_uses_native_transformers(model_dir: Path) -> bool:
+    config_path = model_dir / "config.json"
+    if not config_path.exists():
+        return False
+    try:
+        import json
+
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return model_dir.name.endswith("-hf") or str(config.get("transformers_version", "")).endswith(".dev0")
+
+
+def transcribe_with_native_transformers(args, media_path: Path, wav_path: Path, device_map: str, dtype):
+    import torch
+    from transformers import AutoModelForMultimodalLM, AutoProcessor
+
+    model = AutoModelForMultimodalLM.from_pretrained(
+        args.model_dir,
+        dtype=dtype,
+        device_map=device_map,
+    )
+    processor = AutoProcessor.from_pretrained(args.model_dir)
+
+    print("Transcribing...")
+    inputs = processor.apply_transcription_request(
+        language=args.language,
+        audio=str(wav_path),
+    )
+    if dtype == torch.float32:
+        inputs = inputs.to(model.device)
+    else:
+        inputs = inputs.to(model.device, dtype)
+
+    generated_ids = model.generate(**inputs, max_new_tokens=args.max_new_tokens)
+    generated_ids = generated_ids[:, inputs.input_ids.shape[1] :]
+    decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)
+    text = clean_native_transformers_text(decoded[0] if decoded else "")
+
+    class TranscriptResult:
+        pass
+
+    result = TranscriptResult()
+    result.text = text.strip()
+    result.language = args.language or ""
+    return result
+
+
+def clean_native_transformers_text(text: str) -> str:
+    marker = "<asr_text>"
+    if marker in text:
+        text = text.split(marker, 1)[1]
+    return text.strip()
+
+
 def main() -> int:
     args = parse_args()
     media_path = Path(args.media).expanduser().resolve()
     model_dir = Path(args.model_dir).expanduser().resolve()
+    args.model_dir = str(model_dir)
 
     if not media_path.exists():
         print(f"Media file does not exist: {media_path}", file=sys.stderr)
@@ -167,7 +258,10 @@ def main() -> int:
     output_dir = Path(args.output_dir).expanduser().resolve()
     stem = safe_stem(media_path)
     temp_audio_dir = None
-    if args.keep_audio:
+    if is_audio_file(media_path):
+        wav_path = media_path
+        metadata_wav_path = media_path
+    elif args.keep_audio:
         audio_dir = Path(args.audio_dir).expanduser().resolve()
         wav_path = audio_dir / f"{stem}.wav"
         metadata_wav_path = wav_path
@@ -177,19 +271,13 @@ def main() -> int:
         metadata_wav_path = None
     output_base = output_dir / stem
 
-    print(f"Extracting audio: {wav_path}")
+    if wav_path == media_path:
+        print(f"Using audio file directly: {wav_path}")
+    else:
+        print(f"Extracting audio: {wav_path}")
     try:
-        extract_audio(media_path, wav_path, force=args.force_audio)
-
-        import torch
-        from qwen_asr import Qwen3ASRModel
-
-        if args.max_chunk_sec is not None:
-            import qwen_asr.inference.qwen3_asr as qwen3_asr
-            import qwen_asr.inference.utils as qwen_utils
-
-            qwen_utils.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
-            qwen3_asr.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
+        if wav_path != media_path:
+            extract_audio(media_path, wav_path, force=args.force_audio)
 
         device_map, dtype = choose_device(args.device)
         print(f"Loading model: {model_dir}")
@@ -197,24 +285,39 @@ def main() -> int:
         if args.max_chunk_sec is not None:
             print(f"Max audio chunk: {args.max_chunk_sec}s")
 
-        model = Qwen3ASRModel.from_pretrained(
-            str(model_dir),
-            dtype=dtype,
-            device_map=device_map,
-            max_inference_batch_size=1,
-            max_new_tokens=args.max_new_tokens,
-        )
+        if model_uses_native_transformers(model_dir):
+            result = transcribe_with_native_transformers(args, media_path, wav_path, device_map, dtype)
+        else:
+            from qwen_asr import Qwen3ASRModel
 
-        print("Transcribing...")
-        results = model.transcribe(
-            audio=str(wav_path),
-            language=args.language,
-            return_time_stamps=False,
-        )
-        if not results:
-            raise RuntimeError("Qwen3-ASR returned no transcription result.")
+            patch_qwen_asr_rope_defaults()
 
-        write_outputs(output_base, results[0], media_path, metadata_wav_path, model_dir)
+            if args.max_chunk_sec is not None:
+                import qwen_asr.inference.qwen3_asr as qwen3_asr
+                import qwen_asr.inference.utils as qwen_utils
+
+                qwen_utils.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
+                qwen3_asr.MAX_ASR_INPUT_SECONDS = float(args.max_chunk_sec)
+
+            model = Qwen3ASRModel.from_pretrained(
+                str(model_dir),
+                dtype=dtype,
+                device_map=device_map,
+                max_inference_batch_size=1,
+                max_new_tokens=args.max_new_tokens,
+            )
+
+            print("Transcribing...")
+            results = model.transcribe(
+                audio=str(wav_path),
+                language=args.language,
+                return_time_stamps=False,
+            )
+            if not results:
+                raise RuntimeError("Qwen3-ASR returned no transcription result.")
+            result = results[0]
+
+        write_outputs(output_base, result, media_path, metadata_wav_path, model_dir)
     finally:
         if temp_audio_dir is not None:
             temp_audio_dir.cleanup()
